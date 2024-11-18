@@ -76,9 +76,8 @@ SF45LaserSerial::SF45LaserSerial(const char *port) :
 	_obstacle_map_msg.min_distance = 20;
 	_obstacle_map_msg.max_distance = 5000;
 	_obstacle_map_msg.angle_offset = 0;
-	const uint32_t internal_bins = sizeof(_obstacle_map_msg.distances) / sizeof(_obstacle_map_msg.distances[0]);
 
-	for (uint32_t i = 0 ; i < internal_bins; i++) {
+	for (uint32_t i = 0 ; i < BIN_COUNT; i++) {
 		_obstacle_map_msg.distances[i] = UINT16_MAX;
 	}
 
@@ -98,7 +97,6 @@ int SF45LaserSerial::init()
 	param_get(param_find("SF45_ORIENT_CFG"), &_orient_cfg);
 	param_get(param_find("SF45_YAW_CFG"), &_yaw_cfg);
 
-	/* SF45/B (50M) */
 	_interval = 10000;
 	start();
 
@@ -744,14 +742,19 @@ void SF45LaserSerial::sf45_process_replies(float *distance_m)
 
 				// update the current bin to the distance sensor reading
 				// readings in cm
+				const hrt_abstime now = hrt_absolute_time();
+
 				_obstacle_map_msg.distances[current_bin] = _current_bin_dist;
-				_obstacle_map_msg.timestamp = hrt_absolute_time();
+				_data_timestamps[current_bin] = now;
+
+				_publish_obstacle_msg(now);
+
 
 				_current_bin_dist = UINT16_MAX;
 				_previous_bin = current_bin;
 			}
 
-			_obstacle_distance_pub.publish(_obstacle_map_msg);
+
 
 			break;
 		}
@@ -793,4 +796,16 @@ uint16_t SF45LaserSerial::sf45_format_crc(uint16_t crc, uint8_t data_val)
 	}
 
 	return crc;
+}
+
+void SF45LaserSerial::_publish_obstacle_msg(hrt_abstime now)
+{
+	for (int i = 0; i < BIN_COUNT; i++) {
+		if (now - _data_timestamps[i] > SF45_MSG_MEAS_TIMEOUT) {
+			_obstacle_map_msg.distances[i] = UINT16_MAX;
+		}
+	}
+
+	_obstacle_map_msg.timestamp = now;
+	_obstacle_distance_pub.publish(_obstacle_map_msg);
 }
