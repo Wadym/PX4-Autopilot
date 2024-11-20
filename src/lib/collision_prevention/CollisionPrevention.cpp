@@ -604,8 +604,15 @@ void CollisionPrevention::_getVelocityCompensationAcceleration(const float vehic
 
 			const float max_vel = math::trajectory::computeMaxSpeedFromDistance(_param_mpc_jerk_max.get(),
 					      _param_mpc_acc_hor.get(), stop_distance, 0.f);
-			// we dont take the minimum of the last term because of stop_distance is zero but current velocity is not, we want the acceleration to become negative and slow us down.
-			const float curr_acc_vel_constraint = _param_mpc_xy_vel_p_acc.get() * (max_vel - curr_vel_parallel);
+
+			float curr_acc_vel_constraint;
+
+			if (stop_distance >= 0.f) {
+				curr_acc_vel_constraint = _param_mpc_xy_vel_p_acc.get() * math::min((max_vel - curr_vel_parallel), 0.f);
+
+			} else {
+				curr_acc_vel_constraint = -1.f * _param_mpc_xy_vel_p_acc.get() * curr_vel_parallel;
+			}
 
 			if (curr_acc_vel_constraint < vel_comp_accel) {
 				vel_comp_accel = curr_acc_vel_constraint;
