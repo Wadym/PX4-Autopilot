@@ -91,7 +91,7 @@ private:
 	obstacle_distance_s 			_obstacle_map_msg{};
 	uORB::Publication<obstacle_distance_s>	_obstacle_distance_pub{ORB_ID(obstacle_distance)};	/**< obstacle_distance publication */
 	static constexpr int BIN_COUNT = sizeof(obstacle_distance_s::distances) / sizeof(obstacle_distance_s::distances[0]);
-	static constexpr uint64_t 	SF45_MSG_MEAS_TIMEOUT{500_ms};
+	static constexpr uint64_t 	SF45_MSG_MEAS_TIMEOUT{100_ms};
 
 	void				start();
 	void				stop();
